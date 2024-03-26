@@ -8,17 +8,21 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: -9062596628773831471, guid: f7060123e953533418369b8d347d5b9a, type: 3}
+      propertyPath: looping
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 389649548960072786, guid: f7060123e953533418369b8d347d5b9a, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: 480.34888
       objectReference: {fileID: 0}
     - target: {fileID: 389649548960072786, guid: f7060123e953533418369b8d347d5b9a, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.346
+      value: -0.07679683
       objectReference: {fileID: 0}
     - target: {fileID: 389649548960072786, guid: f7060123e953533418369b8d347d5b9a, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -376.6711
       objectReference: {fileID: 0}
     - target: {fileID: 389649548960072786, guid: f7060123e953533418369b8d347d5b9a, type: 3}
       propertyPath: m_LocalRotation.w
@@ -78,5 +82,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8cd4a6cda84cea749bd2bc755ba17f78, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  CarMoveSystem: {fileID: 8481490715254155857, guid: 9715b36815d7aa745a880b8fa54ff57d, type: 3}
-  Isbuy: 0
+  _particleSystem: {fileID: 7044737438260485121}
+  _carGroundEffectSystem: {fileID: 0}
+--- !u!198 &7044737438260485121 stripped
+ParticleSystem:
+  m_CorrespondingSourceObject: {fileID: -9062596628773831471, guid: f7060123e953533418369b8d347d5b9a, type: 3}
+  m_PrefabInstance: {fileID: 7203752802053595344}
+  m_PrefabAsset: {fileID: 0}

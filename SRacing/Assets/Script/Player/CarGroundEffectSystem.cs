@@ -9,6 +9,7 @@ public class CarGroundEffectSystem : MonoBehaviour
 	
 	void Start()
 	{
+		baseSpeed = GameInstance.instance.Speed;
 		moveSystem = GetComponent<CarMoveSystem>();
 		terrainDetector = new TerrainDetector();
 	}

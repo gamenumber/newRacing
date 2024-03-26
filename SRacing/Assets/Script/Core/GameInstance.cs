@@ -4,6 +4,7 @@ using UnityEngine;
 public class GameInstance : MonoBehaviour
 {
 	public static GameInstance instance;
+	public float Speed;
 	public float GamePlayTime = 0f;
 	public int Coin = 0;
 	public int Score = 0;

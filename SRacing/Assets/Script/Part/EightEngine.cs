@@ -1,44 +1,42 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class EightEngine : BasePart
 {
 	public ParticleSystem _particleSystem;
-	public CarMoveSystem CarMoveSystem;
+	public CarGroundEffectSystem _carGroundEffectSystem;
 
-	private void Awake()
+	private void Start()
 	{
-		_particleSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+		// EightEngine 스크립트가 플레이어 오브젝트에 추가될 때 Start 메서드가 호출되므로,
+		// EightEngine 스크립트의 Start 메서드에서 파티클 시스템을 가져오도록 수정
+		if (_particleSystem == null)
+		{
+			_particleSystem = GetComponent<ParticleSystem>();
+		}
 	}
 
 	public override void OnGetPart(CarMoveSystem car)
 	{
 		base.OnGetPart(car);
-		Debug.Log("OnGetPart 호출됨");
-		Debug.Log("CarMoveSystem: " + (CarMoveSystem == null ? "null" : "not null"));
-		Debug.Log("car 매개변수: " + (car == null ? "null" : "not null"));
-		Debug.Log("_particleSystem: " + (_particleSystem == null ? "null" : "not null"));
 
-		car = CarMoveSystem;
-		if (car != null)
-		{
-			car.Speed += 4;
-			Debug.Log("속도 증가: " + car.Speed);
-		}
-		else
-		{
-			Debug.Log("CarMoveSystem이 null입니다.");
-		}
-
+		// 파티클 시스템과 CarGroundEffectSystem 설정
 		if (_particleSystem != null)
 		{
 			_particleSystem.Play();
 		}
 		else
 		{
-			Debug.Log("_particleSystem이 null입니다.");
+			Debug.LogError("Particle system not found.");
+		}
+
+		if (_carGroundEffectSystem != null)
+		{
+			_carGroundEffectSystem.baseSpeed += 4;
+			GameInstance.instance.Speed = _carGroundEffectSystem.baseSpeed;
+		}
+		else
+		{
+			Debug.LogError("Car ground effect system not found.");
 		}
 	}
-
 }

@@ -29,6 +29,14 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 9208146886707620572}
     - target: {fileID: 7044737438260485121, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
+      propertyPath: looping
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7044737438260485121, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
+      propertyPath: lengthInSec
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 7044737438260485121, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
       propertyPath: InitialModule.startSize.scalar
       value: 0.3
       objectReference: {fileID: 0}
@@ -163,6 +171,10 @@ PrefabInstance:
     - target: {fileID: 4935975825104155021, guid: 22fc3037cb2afe14db3cd250b9157f03, type: 3}
       propertyPath: looping
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4935975825104155021, guid: 22fc3037cb2afe14db3cd250b9157f03, type: 3}
+      propertyPath: lengthInSec
+      value: 20
       objectReference: {fileID: 0}
     - target: {fileID: 4935975825104155021, guid: 22fc3037cb2afe14db3cd250b9157f03, type: 3}
       propertyPath: InitialModule.startSize.scalar
@@ -463,8 +475,8 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6033362439809784392}
   serializedVersion: 4
-  m_Mass: 1200
-  m_Drag: 0.5
+  m_Mass: 600
+  m_Drag: 0.2
   m_AngularDrag: 0.1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
@@ -528,7 +540,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 728f8c8bb2abaf242a29b2867e184449, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  baseSpeed: 7
+  baseSpeed: 6
   SlowPage: {fileID: 0}
 --- !u!114 &8481490715254155857
 MonoBehaviour:
@@ -552,8 +564,8 @@ MonoBehaviour:
     Motor: 1
     Steering: 0
   Speed: 15
-  MaxMotor: 15
-  MaxSteer: 10
+  MaxMotor: 10
+  MaxSteer: 20
   BreakForce: 100
   minmovement: 0.1
   center: {fileID: 1268825582258877501}
