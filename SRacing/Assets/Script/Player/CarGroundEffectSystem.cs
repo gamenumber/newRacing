@@ -23,7 +23,7 @@ public class CarGroundEffectSystem : MonoBehaviour
 				SlowPage.gameObject.SetActive(false);
 				break;
 			default:
-				moveSystem.Speed = baseSpeed * 0.3f;
+				moveSystem.Speed = baseSpeed * 0.6f;
 				SlowPage.gameObject.SetActive(true);
 				break;
 		}

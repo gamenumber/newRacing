@@ -4,42 +4,41 @@ using UnityEngine;
 
 public class EightEngine : BasePart
 {
-	private ParticleSystem _particleSystem;
+	public ParticleSystem _particleSystem;
 	public CarMoveSystem CarMoveSystem;
-	public bool Isbuy = false;
 
 	private void Awake()
 	{
-		_particleSystem = GetComponent<ParticleSystem>();
-	}
-
-	private void Update()
-	{
-		if (Isbuy)
-		{
-			if (CarMoveSystem.IsMoving())
-			{
-				if (!_particleSystem.isPlaying)
-				{
-					_particleSystem.Play();
-				}
-			}
-			else
-			{
-				if (_particleSystem.isPlaying)
-				{
-					_particleSystem.Stop();
-				}
-			}
-		}
+		_particleSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 	}
 
 	public override void OnGetPart(CarMoveSystem car)
 	{
-		Isbuy = true;
 		base.OnGetPart(car);
-		this.CarMoveSystem = car;
-		Debug.Log("8기통 엔진");
-		car.Speed += 4f;
+		Debug.Log("OnGetPart 호출됨");
+		Debug.Log("CarMoveSystem: " + (CarMoveSystem == null ? "null" : "not null"));
+		Debug.Log("car 매개변수: " + (car == null ? "null" : "not null"));
+		Debug.Log("_particleSystem: " + (_particleSystem == null ? "null" : "not null"));
+
+		car = CarMoveSystem;
+		if (car != null)
+		{
+			car.Speed += 4;
+			Debug.Log("속도 증가: " + car.Speed);
+		}
+		else
+		{
+			Debug.Log("CarMoveSystem이 null입니다.");
+		}
+
+		if (_particleSystem != null)
+		{
+			_particleSystem.Play();
+		}
+		else
+		{
+			Debug.Log("_particleSystem이 null입니다.");
+		}
 	}
+
 }

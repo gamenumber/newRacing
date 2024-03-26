@@ -78,5 +78,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8cd4a6cda84cea749bd2bc755ba17f78, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  CarMoveSystem: {fileID: 0}
+  CarMoveSystem: {fileID: 8481490715254155857, guid: 9715b36815d7aa745a880b8fa54ff57d, type: 3}
   Isbuy: 0

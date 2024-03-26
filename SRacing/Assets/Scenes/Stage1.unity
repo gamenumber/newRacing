@@ -10048,7 +10048,9 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 5473298837096625355, guid: cedf304d17de79b4eb4a5df809a7bf78, type: 3}
+    - {fileID: 7967350749988680889, guid: cedf304d17de79b4eb4a5df809a7bf78, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: cedf304d17de79b4eb4a5df809a7bf78, type: 3}
@@ -12326,11 +12328,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d4d12de1f8ffc84a8951c013b79d30e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!54 &4745836137470910808 stripped
-Rigidbody:
-  m_CorrespondingSourceObject: {fileID: 3577453479755558074, guid: 9715b36815d7aa745a880b8fa54ff57d, type: 3}
-  m_PrefabInstance: {fileID: 6080931749793031353}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &5234196642549928889
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12432,14 +12429,6 @@ PrefabInstance:
       propertyPath: SpeedText
       value: 
       objectReference: {fileID: 508977123}
-    - target: {fileID: 2623528675891202005, guid: 9715b36815d7aa745a880b8fa54ff57d, type: 3}
-      propertyPath: PlayerRigidbody
-      value: 
-      objectReference: {fileID: 4745836137470910808}
-    - target: {fileID: 4362002617672761168, guid: 9715b36815d7aa745a880b8fa54ff57d, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 9
-      objectReference: {fileID: 0}
     - target: {fileID: 6033362439809784392, guid: 9715b36815d7aa745a880b8fa54ff57d, type: 3}
       propertyPath: m_Name
       value: PlayerCharacter

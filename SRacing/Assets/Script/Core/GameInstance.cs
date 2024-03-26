@@ -18,7 +18,7 @@ public class GameInstance : MonoBehaviour
 	public List<Texture2D> selectedTextures = new List<Texture2D>();
 
 	// 로드할 텍스처의 경로 목록
-	private string[] texturePathsToLoad = { "Textures/Texture1", "Textures/Texture2", "Textures/Texture3" };
+	private string[] texturePathsToLoad = { "DesertWheel", "MountainWheel", "DownTownWheel", "SixEngine", "EightEngine" };
 
 	private void Start()
 	{
