@@ -1,105 +1,5 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1001 &2164551016467068637
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 6408938382977368306}
-    m_Modifications:
-    - target: {fileID: 1403962004031878967, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: m_Name
-      value: EightEngine
-      objectReference: {fileID: 0}
-    - target: {fileID: 1403962004031878967, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3294978027882650664, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: EighttEngine
-      value: 
-      objectReference: {fileID: 968810135592747498}
-    - target: {fileID: 3294978027882650664, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: CarMoveSystem
-      value: 
-      objectReference: {fileID: 8481490715254155857}
-    - target: {fileID: 3294978027882650664, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: _particleSystem
-      value: 
-      objectReference: {fileID: 9208146886707620572}
-    - target: {fileID: 7044737438260485121, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: looping
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7044737438260485121, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: lengthInSec
-      value: 20
-      objectReference: {fileID: 0}
-    - target: {fileID: 7044737438260485121, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: InitialModule.startSize.scalar
-      value: 0.3
-      objectReference: {fileID: 0}
-    - target: {fileID: 7390564437327422594, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7390564437327422594, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: -0.346
-      objectReference: {fileID: 0}
-    - target: {fileID: 7390564437327422594, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7390564437327422594, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 0.23450965
-      objectReference: {fileID: 0}
-    - target: {fileID: 7390564437327422594, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7390564437327422594, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0.9721138
-      objectReference: {fileID: 0}
-    - target: {fileID: 7390564437327422594, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7390564437327422594, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7390564437327422594, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 152.875
-      objectReference: {fileID: 0}
-    - target: {fileID: 7390564437327422594, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
---- !u!1 &968810135592747498 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 1403962004031878967, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-  m_PrefabInstance: {fileID: 2164551016467068637}
-  m_PrefabAsset: {fileID: 0}
---- !u!4 &8690408636879721055 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 7390564437327422594, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-  m_PrefabInstance: {fileID: 2164551016467068637}
-  m_PrefabAsset: {fileID: 0}
---- !u!198 &9208146886707620572 stripped
-ParticleSystem:
-  m_CorrespondingSourceObject: {fileID: 7044737438260485121, guid: db01676a3de43f0438e8309e820e67a0, type: 3}
-  m_PrefabInstance: {fileID: 2164551016467068637}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &2174486633093241635
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -120,6 +20,14 @@ PrefabInstance:
       propertyPath: _particleSystem
       value: 
       objectReference: {fileID: 6533966380790983342}
+    - target: {fileID: 651073898462432636, guid: 22fc3037cb2afe14db3cd250b9157f03, type: 3}
+      propertyPath: _playerController
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 651073898462432636, guid: 22fc3037cb2afe14db3cd250b9157f03, type: 3}
+      propertyPath: _carGroundEffectSystem
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 3906895480405220027, guid: 22fc3037cb2afe14db3cd250b9157f03, type: 3}
       propertyPath: m_Name
       value: SixEngine
@@ -290,9 +198,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: b932fe4aa42af6040b72b2e269c73479, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6772903240876184109}
-    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: b932fe4aa42af6040b72b2e269c73479, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 8690408636879721055}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: b932fe4aa42af6040b72b2e269c73479, type: 3}
       insertIndex: -1
@@ -506,6 +411,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f1def4d006ea8784282a72c05efad88d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  SixEngine: {fileID: 0}
+  EightEngine: {fileID: 0}
+  b_buySix: 0
+  b_buyEight: 0
   impactEffectPrefab: {fileID: 676028150557829203, guid: effaaa665bce18747b546d1bc5c10965, type: 3}
 --- !u!65 &134497969536277709
 BoxCollider:

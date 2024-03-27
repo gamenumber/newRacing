@@ -6,6 +6,12 @@ public class PlayerController : MonoBehaviour
 {
 	private CarMoveSystem _carMoveSystem;
 	private float baseSpeed = 10f;
+
+	public GameObject SixEngine;
+	public GameObject EightEngine;
+
+	public bool b_buySix;
+	public bool b_buyEight;
 	
 	public GameObject impactEffectPrefab;
 	void Start()
@@ -15,6 +21,15 @@ public class PlayerController : MonoBehaviour
 
 	void FixedUpdate()
 	{
+		if (b_buyEight)
+		{
+			EightEngine.SetActive(true);
+		}
+
+		if (b_buySix)
+		{
+			SixEngine.SetActive(true);
+		}
 		MoveInput();	
 	}
 

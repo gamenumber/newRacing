@@ -1,0 +1,2098 @@
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System;
+using System.Collections;
+using System.Collections.Generic; // List를 사용하기 위해 필요
+using UnityEngine;
+using UnityEngine.EventSystems;
+
+public class AIController : MonoBehaviour
+{
+	private CarMoveSystem _carMoveSystem;
+	public List<Transform> WayPoints; // 배열 대신 List 사용
+	private Vector3 _targetPoint;
+	private int _wayPointCount = 1;
+	public float MoveSpeed = 5;
+
+	private void Start()
+	{
+		WayPoints = new List<Transform>(GameManager.Instance.Spawner.waypoints); // List로 초기화
+		_carMoveSystem = GetComponent<CarMoveSystem>();
+	}
+
+	private void FixedUpdate()
+	{
+		MoveAI();
+	}
+
+	void MoveAI()
+	{
+		FindNearWaypoint();
+
+		Vector3 WaypointDistance = transform.InverseTransformPoint(_targetPoint);
+		WaypointDistance = WaypointDistance.normalized;
+		float steering = WaypointDistance.x;
+
+		_carMoveSystem.MoveWheel(1, steering, false);
+	}
+
+	void FindNearWaypoint()
+	{
+		_targetPoint = WayPoints[_wayPointCount].position;
+		if (Vector3.Distance(transform.position, _targetPoint) <= 3f)
+		{
+			if (WayPoints.Count - 1 > _wayPointCount)
+			{
+				_wayPointCount++;
+			}
+			else
+			{
+				_carMoveSystem.MoveWheel(0, 0, true);
+				return;
+			}
+		}
+	}
+
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class AIEnemySpawnManager : BaseManager
+{
+	public List<Transform> waypoints = new List<Transform>();
+	public List<GameObject> enemyPrefabs;
+	public float spawnInterval = 10f;
+	public int maxEnemiesPerSpawn = 3;
+	private List<Vector3> usedPositions = new List<Vector3>();
+	public float spawnRadius = 5f;
+	public Transform playerTransform; // 플레이어의 Transform을 할당할 변수
+
+	void Start()
+	{
+		StartCoroutine(SpawnEnemiesAtIntervals());
+	}
+
+	IEnumerator SpawnEnemiesAtIntervals()
+	{
+		while (true)
+		{
+			yield return new WaitForSeconds(spawnInterval);
+			usedPositions.Clear();
+			int enemiesToSpawn = Random.Range(1, maxEnemiesPerSpawn + 1);
+			for (int i = 0; i < enemiesToSpawn; i++)
+			{
+				SpawnEnemyInReverseOrder();
+			}
+		}
+	}
+
+	void SpawnEnemyInReverseOrder()
+	{
+		if (waypoints.Count > 0 && playerTransform != null)
+		{
+			// 플레이어와 가장 가까운 waypoint 찾기
+			int closestWaypointIndex = -1;
+			float closestDistance = float.MaxValue;
+			for (int i = 0; i < waypoints.Count; i++)
+			{
+				float distance = Vector3.Distance(playerTransform.position, waypoints[i].position);
+				if (distance < closestDistance)
+				{
+					closestDistance = distance;
+					closestWaypointIndex = i;
+				}
+			}
+
+			// 가장 가까운 waypoint에서 역순으로 이동하기
+			if (closestWaypointIndex != -1)
+			{
+				// 현재 인덱스에서 역순으로 배열을 탐색
+				for (int i = closestWaypointIndex; i >= 0; i--)
+				{
+					Vector3 spawnPosition = waypoints[i].position + (Random.insideUnitSphere.normalized * spawnRadius);
+
+					if (!usedPositions.Contains(spawnPosition))
+					{
+						usedPositions.Add(spawnPosition);
+						GameObject enemyPrefab = enemyPrefabs[Random.Range(0, enemyPrefabs.Count)];
+						Instantiate(enemyPrefab, spawnPosition, Quaternion.identity);
+
+						// 한 번에 하나의 적만 스폰하도록 루프를 빠져나옴
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	void OnDrawGizmos()
+	{
+		if (waypoints.Count > 1)
+		{
+			for (int i = 0; i < waypoints.Count - 1; i++)
+			{
+				// 웨이포인트 사이에 선을 그림
+				Gizmos.color = Color.red; // 선의 색상 지정
+				Gizmos.DrawLine(waypoints[i].position, waypoints[i + 1].position);
+
+				// 웨이포인트 위치에 구체를 그림
+				Gizmos.color = Color.blue; // 구체의 색상 지정
+				Gizmos.DrawSphere(waypoints[i].position, 0.5f); // 마지막 웨이포인트에도 구체를 그림
+			}
+			// 마지막 웨이포인트에 구체를 그리는 코드
+			Gizmos.DrawSphere(waypoints[waypoints.Count - 1].position, 0.5f);
+		}
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine.SceneManagement;
+
+[System.Serializable]
+public class AxleInfo
+{
+	public WheelCollider leftWheel;
+	public WheelCollider rightWheel;
+	public bool motor;
+	public bool steering;
+}
+
+public class BaseCar : MonoBehaviour
+{
+	public List<AxleInfo> axleInfos;
+	public float maxMotorTorque;
+	public float maxSteeringAngle;
+	public float BreakForce;
+
+	public Transform WayPoints;
+	public Transform TargetPoint;
+	public Transform center;
+	public int WayIndex = 0;
+
+	[HideInInspector] public Rigidbody rb;
+
+	[HideInInspector] public float motor = 3f;
+	[HideInInspector] public float steering = 0;
+	[HideInInspector] public float Break = 0;
+
+
+
+	public void Start()
+	{
+		rb = GetComponent<Rigidbody>();
+		rb.centerOfMass = center.localPosition;
+		WayPoints = GameObject.FindWithTag("Manager").transform;
+
+	}
+	// finds the corresponding visual wheel
+	// correctly applies the transform
+	public virtual void LocalPosition(WheelCollider collider)
+	{
+		if (collider.transform.childCount == 0)
+		{
+			return;
+		}
+
+		Transform visualWheel = collider.transform.GetChild(0);
+
+		Vector3 position;
+		Quaternion rotation;
+		collider.GetWorldPose(out position, out rotation);
+
+		visualWheel.transform.position = position;
+		visualWheel.transform.rotation = rotation;
+	}
+
+	public void FixedUpdate()
+	{
+
+		Movement();
+	}
+
+	public virtual void Movement()
+	{
+		foreach (AxleInfo axleInfo in axleInfos)
+		{
+			if (axleInfo.steering)
+			{
+				axleInfo.leftWheel.steerAngle = steering;
+				axleInfo.rightWheel.steerAngle = steering;
+			}
+			if (axleInfo.motor)
+			{
+				axleInfo.leftWheel.motorTorque = motor;
+				axleInfo.rightWheel.motorTorque = motor;
+			}
+
+			axleInfo.leftWheel.brakeTorque = Break;
+			axleInfo.rightWheel.brakeTorque = Break;
+
+			LocalPosition(axleInfo.leftWheel);
+			LocalPosition(axleInfo.rightWheel);
+		}
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+
+public class ForwardDashAI : BaseCar
+{
+	public float playerTargetDistance = 7f; // 플레이어를 향해 돌진하기 시작하는 거리
+	public float Moter;
+
+	public override void Movement()
+	{
+		GameObject player = GameObject.FindGameObjectWithTag("Player");
+
+		if (TargetPoint == null) TargetPoint = WayPoints.GetChild(WayIndex);
+		if (Vector3.Distance(player.transform.position, transform.position) <= 150)
+		{
+			TargetPoint = player.transform;
+		}
+		else if (Vector3.Distance(TargetPoint.position, transform.position) <= 10)
+		{
+			Debug.Log(WayIndex);
+			WayIndex++;
+
+			if (WayPoints.childCount == WayIndex)
+			{
+				WayIndex = 0;
+				TargetPoint = WayPoints.GetChild(0);
+			}
+			TargetPoint = WayPoints.GetChild(WayIndex);
+		}
+		Vector3 waypointRelativeDistance = transform.InverseTransformPoint(TargetPoint.position);
+		waypointRelativeDistance /= waypointRelativeDistance.magnitude;
+		steering = (waypointRelativeDistance.x / waypointRelativeDistance.magnitude);
+		motor = Moter;
+		base.Movement();
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class ReverseDashAI : BaseCar
+{
+
+	public float Motor = 1f;
+	
+	public override void Movement()
+	{
+		if (TargetPoint == null) TargetPoint = WayPoints.GetChild(WayIndex);
+		if (Vector3.Distance(TargetPoint.position, transform.position) <= 10 && WayPoints.childCount > WayIndex + 1)
+		{
+
+			WayIndex++;
+			if (WayPoints.childCount == WayIndex)
+			{
+				WayIndex = 0;
+			}
+			TargetPoint = WayPoints.GetChild(WayIndex);
+		}
+
+		Vector3 waypointRelativeDistance = transform.InverseTransformPoint(TargetPoint.position);
+		waypointRelativeDistance /= waypointRelativeDistance.magnitude;
+		steering = (waypointRelativeDistance.x / waypointRelativeDistance.magnitude) ;
+		motor = Motor;
+		base.Movement();
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class BaseManager : MonoBehaviour
+{
+	protected GameManager _gameManager;
+	public GameManager GameManager { get { return _gameManager; } }
+	public virtual void Init(GameManager gameManager)
+	{
+		_gameManager = gameManager;
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using UnityEngine.SceneManagement;
+using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+using System.Text;
+using TMPro;
+using Unity.VisualScripting;
+using UnityEngine.SocialPlatforms.Impl;
+using UnityEngine.UI;
+using System.Runtime.CompilerServices;
+
+public class GameManager : MonoBehaviour
+{
+	public static GameManager Instance;
+	public ShopManager ShopManager;
+	public ItemManager ItemManager;
+	public PartManager PartManager;
+	public AIEnemySpawnManager Spawner;
+	public SoundManager SoundManager;
+	public RankingManager RankingManager;
+
+	public TextMeshProUGUI CountdownText;
+
+	public GameObject F1Page;
+
+	private IEnumerator CountDown()
+	{
+		SoundManager.StopAllSFX();
+		SoundManager.PlaySFX("CountDown");
+
+		CountdownText.text = "3";
+		yield return new WaitForSeconds(1f);
+		CountdownText.text = "2";
+		yield return new WaitForSeconds(1f);
+		CountdownText.text = "1";
+		yield return new WaitForSeconds(1f);
+
+		CountdownText.gameObject.SetActive(false);
+
+		if (SceneManager.GetActiveScene().name == "Stage1")
+		{
+			SoundManager.PlayBGM("Bgm1");
+		}
+		else if (SceneManager.GetActiveScene().name == "Stage2")
+		{
+			SoundManager.PlayBGM("Bgm2");
+		}
+		else if (SceneManager.GetActiveScene().name == "Stage3")
+		{
+			SoundManager.PlayBGM("Bgm3");
+		}
+	}
+	void Start()
+	{
+		StartCoroutine(CountDown());
+
+		if (ShopManager)
+			ShopManager.Init(this);
+		if (ItemManager)
+			ItemManager.Init(this);
+		if (PartManager)
+			PartManager.Init(this);
+		if (Spawner) 
+			Spawner.Init(this);
+		if (SoundManager)		
+			SoundManager.Init(this);
+		if (RankingManager)
+			RankingManager.Init(this);
+	}
+
+	public void InitnumberofLab()
+	{
+		GameInstance.instance.RabCount = 0;
+		GameInstance.instance.EnemyRabCount = 0;
+	}
+
+	private void Awake()
+	{	
+		if (Instance == null)
+		{
+			Instance = this;
+		}
+		else
+			Destroy(this.gameObject);
+	}
+
+	public void GameStart()
+	{
+		SceneManager.LoadScene("Stage1");
+	}
+
+	public void GoingNextStage()
+	{
+		Time.timeScale = 1f;
+		string currentSceneName = SceneManager.GetActiveScene().name;
+
+		switch (currentSceneName)
+		{
+			case "Stage1":
+				SceneManager.LoadScene("Stage2");
+				break;
+
+			case "Stage2":
+				SceneManager.LoadScene("Stage3");
+				break;
+
+			case "Stage3":
+				SceneManager.LoadScene("Result");
+				break;
+		}
+
+	}
+
+	public void RestartStage()
+	{
+		Time.timeScale = 1f;
+		SceneManager.LoadScene($"{SceneManager.GetActiveScene().name}");
+	}
+
+	public void StageEnd()
+	{
+		if (GameInstance.instance.GamePlayTime < 300f)
+		{
+			AddScore(100);
+		
+
+		}
+
+		else if (GameInstance.instance.GamePlayTime < 320f)
+		{
+			AddScore(80);
+			
+
+		}
+
+		else if (GameInstance.instance.GamePlayTime < 360f)
+		{
+			AddScore(40);
+			
+
+		}
+
+		else if (GameInstance.instance.GamePlayTime < 400f)
+		{
+			AddScore(20);
+			
+
+		}
+
+		else
+		{
+			AddScore(10);
+			
+		}
+
+	}
+
+	public void GameQuit()
+	{
+		Application.Quit();
+	}
+	public void GoingMain()
+	{
+		SceneManager.LoadScene("MainMenu");
+	}
+
+	public void AddScore(int score)
+	{
+		GameInstance.instance.Score += score;
+	}
+	public void AddCoin(int coin)
+	{
+		GameInstance.instance.Coin += coin;
+	}
+
+	private void Update()
+	{
+		if (Input.GetKeyUp(KeyCode.F1))
+		{
+			F1Page.gameObject.SetActive(true);
+		}
+
+
+		if (Input.GetKeyUp(KeyCode.F2))
+		{
+			ShopManager.GoingShop();
+			ShopManager.IsFree = true;
+		}
+
+
+		if (Input.GetKeyUp(KeyCode.F3))
+		{
+			RestartStage();
+		}
+
+
+		if (Input.GetKeyUp(KeyCode.F4))
+		{
+			string currentSceneName = SceneManager.GetActiveScene().name;
+
+			switch (currentSceneName)
+			{
+				case "Stage1":
+					SceneManager.LoadScene("Stage2");
+					GameInstance.instance.GamePlayTime = 0f;
+					break;
+
+				case "Stage2":
+					SceneManager.LoadScene("Stage3");
+					GameInstance.instance.GamePlayTime = 0f;
+					break;
+
+				default:
+					SceneManager.LoadScene("Stage1");
+					GameInstance.instance.GamePlayTime = 0f;
+					break;
+			}
+
+		}
+	}
+
+	public void BoostItem()
+	{
+		SpawnItemByName(EnumTypes.ItemName.Boost);
+	}
+
+	public void BooostItem()
+	{
+		SpawnItemByName(EnumTypes.ItemName.Booost);
+	}
+
+	public void ShopItem()
+	{
+		SpawnItemByName(EnumTypes.ItemName.shop);
+	}
+
+	public void SmallGoldItem()
+	{
+		SpawnItemByName(EnumTypes.ItemName.smallgold);
+	}
+
+	public void MiddleGoldItem()
+	{
+		SpawnItemByName(EnumTypes.ItemName.middlegold);
+	}
+
+	public void BigGoldItem()
+	{
+		SpawnItemByName(EnumTypes.ItemName.biggold);
+	}
+
+	private void SpawnItemByName(EnumTypes.ItemName itemName)
+	{
+		Vector3 playerPosition = GameObject.FindWithTag("Player").transform.position;
+		Item item = ItemManager.Items.Find(i => i.Name == itemName);
+		if (item != null)
+		{
+			ItemManager.SpawnItem(item.Prefab, playerPosition);
+		}
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class InGameUIManager : MonoBehaviour
+{
+	public bool isPaused = false;
+	public GameObject GameStopPage;
+
+	void Update()
+	{
+		if (Input.GetKeyUp(KeyCode.F5))
+		{
+			PauseGame();
+		}
+
+		// 게임이 일시정지 상태가 아닐 때만 GamePlayTime을 업데이트합니다.
+		if (!isPaused)
+		{
+			GameInstance.instance.GamePlayTime += Time.deltaTime;
+		}
+	}
+
+	public void PauseGame()
+	{
+		GameStop();
+		isPaused = true;
+		GameStopPage.gameObject.SetActive(true);
+	}
+
+	public void ResumeGame()
+	{
+		GameRestart();
+		isPaused = false;
+		GameStopPage.gameObject.SetActive(false);
+	}
+
+	public void GameStop()
+	{
+		Time.timeScale = 0;
+	}
+
+	public void GameRestart()
+	{
+		Time.timeScale = 1;
+	}
+
+	public void GoingMain()
+	{
+		SceneManager.LoadScene("MainMenu");
+		GameInstance.instance = null;
+		GameRestart();
+	}
+
+
+
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace EnumTypes
+{
+	public enum ItemName
+	{
+		Boost, Booost, smallgold, middlegold, biggold, shop
+	}
+
+	public enum PartName
+	{
+		DesertWheel, MountainWheel, DownTownWheel, SixEngine, EightEngine
+	}
+}
+
+[System.Serializable]
+public class Item
+{
+	public EnumTypes.ItemName Name;
+	public GameObject Prefab;
+}
+
+public class BaseItem : MonoBehaviour
+{
+	public virtual void OnGetItem(PlayerController player) { }
+}
+
+public class ItemManager : BaseManager
+{
+	public List<Item> Items = new List<Item>();
+	public List<Transform> WayPoints = new List<Transform>();
+	public List<GameObject> CurrentSpawnItems = new List<GameObject>();
+
+	public int maxSpawnCount = 3; // 한 지점에서 소환될 최대 아이템 수
+	public float spawnInterval = 30f; // 아이템 생성 간격 (초)
+
+	private void Start()
+	{
+		WayPoints = GameManager.Instance.Spawner.waypoints;
+		InvokeRepeating("SpawnItemsInTrack", spawnInterval, spawnInterval);
+	}
+
+	public void SpawnItem(GameObject itemPrefab, Vector3 position)
+	{
+		Instantiate(itemPrefab, new Vector3(position.x, 0, position.z), Quaternion.identity);
+	}
+	private void SpawnItemsInTrack()
+	{
+		foreach (Transform waypoint in WayPoints)
+		{
+			if (Random.Range(0, 5) == 0)
+			{
+				int spawnCount = Random.Range(1, maxSpawnCount + 1); // 랜덤한 수의 아이템 생성
+				for (int k = 0; k < spawnCount; k++)
+				{
+					int spawnIndex = Random.Range(0, Items.Count);
+					Vector3 spawnPosition = new Vector3(waypoint.position.x + Random.Range(-1, 2) * 3f, 0, waypoint.position.z);
+					spawnPosition = SetGroundPos(spawnPosition); // SetGroundPos 호출하여 지형 위에 위치하도록 수정
+					GameObject instance = Instantiate(Items[spawnIndex].Prefab, spawnPosition, Quaternion.identity);
+					CurrentSpawnItems.Add(instance);
+				}
+			}
+		}
+	}
+
+	private Vector3 SetGroundPos(Vector3 t)
+	{
+		t += new Vector3(0, 100, 0);
+		RaycastHit hit;
+		if (Physics.Raycast(t, Vector3.down, out hit, 200, ~LayerMask.GetMask("Item")))
+		{
+			t = hit.point;
+		}
+
+		return t;
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI; 
+
+public class LapManager : MonoBehaviour
+{
+	public TextMeshProUGUI lapText; 
+	public TextMeshProUGUI EnemylapText2;
+	public int totalLaps = 5;
+	private int currentLap;
+	private int competitorLab;
+
+	public GameObject WinUI;
+	public GameObject LoseUI;
+
+	private bool gameEnded = false; // 게임 종료 플래그 추가
+
+	private void Update()
+	{
+		if (!gameEnded)
+		{
+			GameInstance.instance.RabCount = currentLap;
+			GameInstance.instance.EnemyRabCount = competitorLab;
+			lapText.text = $"Player : {currentLap} / {totalLaps}";
+			EnemylapText2.text = $"Competitor : {competitorLab} / {totalLaps}";
+			GameEnd();
+		} 
+		
+	}
+
+	private void OnTriggerEnter(Collider other)
+	{
+		if (gameEnded) return; 
+
+		if (other.CompareTag("Player") && currentLap < totalLaps)
+		{
+			currentLap += 1;
+		}
+
+		if (other.CompareTag("Competitor") && competitorLab < totalLaps)
+		{
+			competitorLab += 1;
+		}
+	}
+
+	public void GameEnd()
+	{
+		if (competitorLab >= totalLaps)
+		{
+			GameInstance.instance.GamePlayTime = 0;
+			Time.timeScale = 0;
+			LoseUI.SetActive(true);
+			gameEnded = true; // 게임 종료 플래그 설정
+		}
+		else if (currentLap >= totalLaps)
+		{
+			GameInstance.instance.GamePlayTime = 0;
+			Time.timeScale = 0;
+			GameManager.Instance.StageEnd();
+			WinUI.SetActive(true);
+			gameEnded = true; // 게임 종료 플래그 설정
+		}
+	}
+
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class MiniMapManager : BaseManager
+{
+	public Camera mainCamera;
+	public RawImage rawImage; 
+
+	void Start()
+	{
+		RenderTexture renderTexture = new RenderTexture(Screen.width, Screen.height, 24);
+		mainCamera.targetTexture = renderTexture;
+		rawImage.texture = renderTexture;
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections.Generic;
+using UnityEngine;
+
+[System.Serializable]
+public class Part
+{
+	public EnumTypes.PartName Name;
+	public GameObject Prefab;
+}
+
+public class BasePart : MonoBehaviour
+{
+	public virtual void OnGetPart(CarMoveSystem carMoveSystem) { }
+}
+public class PartManager : BaseManager
+{
+	public List<Part> Parts = new List<Part>();
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections.Generic;
+using System.Linq;
+using TMPro;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class RankingManager : BaseManager
+{
+	private List<RankingEntry> rankingEntries = new List<RankingEntry>();
+	public TextMeshProUGUI[] Rankings = new TextMeshProUGUI[5];
+	public TextMeshProUGUI InitialInputFieldText;
+
+	private string CurrentPlayerInitial;
+
+
+	private void Awake()
+	{
+		MainMenuRanking();
+	}
+
+	public void SetInitial()
+	{
+		GameManager.Instance.GoingMain();
+		CurrentPlayerInitial = InitialInputFieldText.text;
+		SetCurrentScore();
+		SortRanking();
+		UpdateRankingUI();
+	}
+
+	public void MainMenu()
+	{
+		SceneManager.LoadScene("MainMenu");
+	}
+
+	public void InitMainMenu()
+	{
+		SceneManager.LoadScene("MainMenu");
+	
+
+	}
+
+	public void MainMenuRanking()
+	{
+		for (int i = 0; i < 5; i++)
+		{
+			int currentScore = PlayerPrefs.GetInt(i + "BestScore");
+			string currentName = PlayerPrefs.GetString(i + "BestName");
+			if (currentName == "")
+			{
+				currentName = "None";
+			}
+
+			rankingEntries.Add(new RankingEntry(currentScore, currentName));
+		}
+
+		SortRanking();
+
+		for (int i = 0; i < Rankings.Length; i++)
+		{
+			if (i < rankingEntries.Count)
+			{
+				Rankings[i].text = $"{i + 1} {rankingEntries[i].Name} : {rankingEntries[i].Score}";
+			}
+
+			else
+			{
+				Rankings[i].text = $"{i + 1} -";
+
+			}
+		}
+	}
+
+	void SetCurrentScore()
+	{
+		rankingEntries.Clear();
+
+		for (int i = 0; i < 5; i++)
+		{
+			int currentScore = PlayerPrefs.GetInt(i + "BestScore");
+			string currentName = PlayerPrefs.GetString(i + "BestName");
+			if (currentName == "")
+			{
+				currentName = "None";
+			}
+
+			rankingEntries.Add(new RankingEntry(currentScore, currentName));
+
+
+		}
+
+		int currentPlayerScore = GameInstance.instance.Score;
+		string currentPlayerName = CurrentPlayerInitial;
+
+		if (IsScoreEligibleForRanking(currentPlayerScore))
+		{
+			rankingEntries.Add(new RankingEntry(currentPlayerScore, currentPlayerName));
+		}
+	}
+
+	bool IsScoreEligibleForRanking(int currentPlayerScore)
+	{
+		return rankingEntries.Count < 5 || currentPlayerScore > rankingEntries.Min(entry => entry.Score);
+	}
+
+	void SortRanking()
+	{
+		rankingEntries = rankingEntries.OrderByDescending(entry => entry.Score).ToList();
+
+		if (rankingEntries.Count > 5)
+		{
+			rankingEntries.RemoveAt(rankingEntries.Count - 1);
+		}
+	}
+
+	void UpdateRankingUI()
+	{ 
+
+		for (int i = 0; i < Rankings.Length; i++)
+		{
+			if (i < rankingEntries.Count)
+			{
+				Rankings[i].text = $"{i + 1} {rankingEntries[i].Name}";
+			}
+			else
+			{
+				Rankings[i].text = $"{i + 1} -";
+			}
+		}
+
+		for (int i = 0; i < rankingEntries.Count; i++)
+		{
+			PlayerPrefs.SetInt(i + "BestScore", rankingEntries[i].Score);
+			PlayerPrefs.SetString(i + "BestName", rankingEntries[i].Name);
+		}
+	}
+
+
+}
+
+
+public class RankingEntry
+{
+	public int Score { get; set; }
+	public string Name { get; set; }
+
+	public RankingEntry(int score, string name)
+	{
+		Score = score;
+		Name = name;
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using Unity.VisualScripting;
+using UnityEngine;
+
+[System.Serializable] // 클래스 안의 정보(변수)들이 인스펙터에 표시 될 수 있도록
+public class Sound  // 컴포넌트 추가 불가능.  MonoBehaviour 상속 안 받아서. 그냥 C# 클래스.
+{
+	public string Name;  // 곡 이름
+	public AudioClip Clip;  // 곡
+}
+
+public class SoundManager : BaseManager
+{
+	static public SoundManager instance;  // 자기 자신을 공유 자원으로. static은 씬이 바뀌어도 유지된다.
+
+	[SerializeField]
+	private Sound[] SFXSounds;  // 효과음 오디오 클립들
+
+	[SerializeField]
+	private Sound[] BgmSounds;  // BGM 오디오 클립들
+
+	[SerializeField]
+	private AudioSource AudioSourceBgm;  // BGM 재생기. BGM 재생은 한 군데서만 이루어지면 되므로 배열 X 
+
+	[SerializeField]
+	private AudioSource[] AudioSourceSFX;  // 효과음들은 동시에 여러개가 재생될 수 있으므로 'mp3 재생기'를 배열로 선언
+
+	private void Awake()  // 객체 생성시 최초 실행 (그래서 싱글톤을 여기서 생성)
+	{
+		if (instance == null)  // 단 하나만 존재하게끔
+		{
+			instance = this;  // 객체 생성시 instance에 자기 자신을 넣어줌
+							  //DontDestroyOnLoad(gameObject);  // 씬 바뀔 때 자기 자신 파괴 방지
+		}
+		else
+			Destroy(this.gameObject);
+	}
+
+	public void PlaySFX(string _name)
+	{
+		// If not "Crash," play the other SFX sounds
+		for (int j = 0; j < AudioSourceSFX.Length; j++)
+		{
+			if (false == AudioSourceSFX[j].isPlaying)
+			{
+				for (int i = 0; i < SFXSounds.Length; i++)
+				{
+					if (_name == SFXSounds[i].Name)
+					{
+						AudioSourceSFX[j].clip = SFXSounds[i].Clip;
+						AudioSourceSFX[j].Play();
+						return;
+					}
+				}
+				Debug.Log(_name + " 사운드가 SoundManager에 등록되지 않았습니다.");
+				return;
+			}
+		}
+		Debug.Log("모든 가용 AudioSource가 사용 중입니다.");
+	}
+
+
+
+	public void PlayBGM(string _name)
+	{
+		for (int i = 0; i < BgmSounds.Length; i++)
+		{
+			if (_name == BgmSounds[i].Name)
+			{
+				AudioSourceBgm.clip = BgmSounds[i].Clip;
+				AudioSourceBgm.Play();
+				return;
+			}
+		}
+		Debug.Log(_name + "사운드가 SoundManager에 등록되지 않았습니다.");
+	}
+
+	public void StopSFX(string _name)
+	{
+		for (int i = 0; i < AudioSourceSFX.Length; i++)
+		{
+			if (AudioSourceSFX[i].isPlaying && AudioSourceSFX[i].clip != null && _name == GetSoundNameByClip(AudioSourceSFX[i].clip))
+			{
+				AudioSourceSFX[i].Stop();
+				return;
+			}
+		}
+
+		Debug.Log(_name + " 사운드가 현재 재생 중이지 않거나 SoundManager에 등록되지 않았습니다.");
+	}
+
+	// Example method to retrieve sound name by AudioClip (replace with your actual implementation)
+	private string GetSoundNameByClip(AudioClip clip)
+	{
+		for (int i = 0; i < SFXSounds.Length; i++)
+		{
+			if (SFXSounds[i].Clip == clip)
+			{
+				return SFXSounds[i].Name;
+			}
+		}
+
+		return null;
+	}
+
+	public void StopAllSFX()
+	{
+		for (int i = 0; i < AudioSourceSFX.Length; i++)
+		{
+			AudioSourceSFX[i].Stop();
+		}
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class BigGoldItem : BaseItem
+{
+	public override void OnGetItem(PlayerController player)
+	{
+		base.OnGetItem(player);
+		GameManager.Instance.AddCoin(10000000);
+	}
+
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using Cinemachine;
+using UnityEngine;
+
+public class BoostItem : BaseItem
+{
+	public float BoostSpeed = 30f;
+	private CinemachineVirtualCamera playerCamera;
+	private Vector3 forwardDirection; // 카메라가 바라보는 방향을 저장하기 위한 변수
+	public Rigidbody rb;
+
+	public override void OnGetItem(PlayerController player)
+	{
+		base.OnGetItem(player);
+		rb.velocity += forwardDirection * BoostSpeed;
+		SoundManager.instance.PlaySFX("Dash");
+	}
+
+	void Start()
+	{
+		rb = GameObject.FindWithTag("Player").GetComponent<Rigidbody>();
+		playerCamera = GameObject.FindObjectOfType<CinemachineVirtualCamera>();
+	}
+
+	void FixedUpdate()
+	{
+		// 카메라가 바라보는 방향을 얻어옴
+		forwardDirection = playerCamera.transform.forward;
+		// y 값을 0으로 고정
+		forwardDirection.y = 0f;
+		// 방향을 정규화하여 길이가 1이 되도록 함
+		forwardDirection.Normalize();
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class MiddleGoldItem : BaseItem
+{
+	public override void OnGetItem(PlayerController player)
+	{
+		base.OnGetItem(player);
+		GameManager.Instance.AddCoin(5000000);
+	}
+
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using Cinemachine;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Shopitem : BaseItem
+{
+	public override void OnGetItem(PlayerController player)
+	{
+		base.OnGetItem(player);
+		GameManager.Instance.ShopManager.GoingShop();	
+	}
+
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class SmallGoldItem : BaseItem
+{
+	public override void OnGetItem(PlayerController player)
+	{
+		base.OnGetItem(player);
+		GameManager.Instance.AddCoin(1000000);
+	}
+
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class DesertWheel : BasePart
+{
+	private ParticleSystem _particleSystem; 
+	public CarMoveSystem CarMoveSystem;
+	public bool Isbuy = false;
+
+	private void Awake()
+	{
+		_particleSystem = GetComponent<ParticleSystem>(); 
+	}
+
+	private void Update()
+	{
+		if (Isbuy)
+		{
+			if (CarMoveSystem.IsMoving())
+			{
+				if (!_particleSystem.isPlaying)
+				{
+					_particleSystem.Play();
+				}
+			}
+			else
+			{
+				if (_particleSystem.isPlaying)
+				{
+					_particleSystem.Stop();
+				}
+			}
+		}	
+	}
+
+	public override void OnGetPart(CarMoveSystem car)
+	{
+		Isbuy = true;
+		base.OnGetPart(car);
+		this.CarMoveSystem = car;
+		Debug.Log("»ç¸· ¹ÙÄû");
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class DownTownWheel : BasePart
+{
+	private ParticleSystem _particleSystem;
+	public CarMoveSystem CarMoveSystem;
+	public bool Isbuy = false;
+
+	private void Awake()
+	{
+		_particleSystem = GetComponent<ParticleSystem>();
+	}
+
+	private void Update()
+	{
+		if (Isbuy)
+		{
+			if (CarMoveSystem.IsMoving())
+			{
+				if (!_particleSystem.isPlaying)
+				{
+					_particleSystem.Play();
+				}
+			}
+			else
+			{
+				if (_particleSystem.isPlaying)
+				{
+					_particleSystem.Stop();
+				}
+			}
+		}
+	}
+
+	public override void OnGetPart(CarMoveSystem car)
+	{
+		Isbuy = true;
+		base.OnGetPart(car);
+		this.CarMoveSystem = car;
+		Debug.Log("µµ½Ã ¹ÙÄû");
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class EightEngine : BasePart
+{
+	private ParticleSystem _particleSystem;
+	public CarMoveSystem CarMoveSystem;
+	public bool Isbuy = false;
+
+	private void Awake()
+	{
+		_particleSystem = GetComponent<ParticleSystem>();
+	}
+
+	private void Update()
+	{
+		if (Isbuy)
+		{
+			if (CarMoveSystem.IsMoving())
+			{
+				if (!_particleSystem.isPlaying)
+				{
+					_particleSystem.Play();
+				}
+			}
+			else
+			{
+				if (_particleSystem.isPlaying)
+				{
+					_particleSystem.Stop();
+				}
+			}
+		}
+	}
+
+	public override void OnGetPart(CarMoveSystem car)
+	{
+		Isbuy = true;
+		base.OnGetPart(car);
+		this.CarMoveSystem = car;
+		Debug.Log("8±âÅë ¿£Áø");
+		car.Speed += 4f;
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class MountainWheel : BasePart
+{
+	private ParticleSystem _particleSystem;
+	public CarMoveSystem CarMoveSystem;
+	public bool Isbuy = false;
+
+	private void Awake()
+	{
+		_particleSystem = GetComponent<ParticleSystem>();
+	}
+
+	private void Update()
+	{
+		if (Isbuy)
+		{
+			if (CarMoveSystem.IsMoving())
+			{
+				if (!_particleSystem.isPlaying)
+				{
+					_particleSystem.Play();
+				}
+			}
+			else
+			{
+				if (_particleSystem.isPlaying)
+				{
+					_particleSystem.Stop();
+				}
+			}
+		}
+	}
+
+	public override void OnGetPart(CarMoveSystem car)
+	{
+		Isbuy = true;
+		base.OnGetPart(car);
+		this.CarMoveSystem = car;
+		Debug.Log("»ê¾Ç ¹ÙÄû");
+
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class SixEngine : BasePart
+{
+	private ParticleSystem _particleSystem;
+	public CarMoveSystem CarMoveSystem;
+	public bool Isbuy = false;
+
+	private void Awake()
+	{
+		_particleSystem = GetComponent<ParticleSystem>();
+	}
+
+	private void Update()
+	{
+		if (Isbuy)
+		{
+			if (CarMoveSystem.IsMoving())
+			{
+				if (!_particleSystem.isPlaying)
+				{
+					_particleSystem.Play();
+				}
+			}
+			else
+			{
+				if (_particleSystem.isPlaying)
+				{
+					_particleSystem.Stop();
+				}
+			}
+		}
+	}
+
+	public override void OnGetPart(CarMoveSystem car)
+	{
+		Isbuy = true;
+		base.OnGetPart(car);
+		this.CarMoveSystem = car;
+		car.Speed += 2f;
+		
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+
+public class CarGroundEffectSystem : MonoBehaviour
+{
+	private TerrainDetector terrainDetector;
+	private CarMoveSystem moveSystem;
+	public float baseSpeed = 10f;
+	public GameObject SlowPage;
+	
+	void Start()
+	{
+		moveSystem = GetComponent<CarMoveSystem>();
+		terrainDetector = new TerrainDetector();
+	}
+
+	void Update()
+	{
+		int activeTerrainTextureIdx = terrainDetector.GetActiveTerrainTextureIdx(transform.position);
+		switch (activeTerrainTextureIdx)
+		{
+			case 0:
+				moveSystem.Speed = baseSpeed;
+				SlowPage.gameObject.SetActive(false);
+				break;
+			default:
+				moveSystem.Speed = baseSpeed * 0.3f;
+				SlowPage.gameObject.SetActive(true);
+				break;
+		}
+
+	}
+
+	
+
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System;
+using System.Collections;
+using UnityEngine;
+
+[Serializable]
+public class WheelInfo
+{
+	public WheelCollider L_Wheel;
+	public WheelCollider R_Wheel;
+
+	public bool Motor;
+	public bool Steering;
+}
+
+public class CarMoveSystem : MonoBehaviour
+{
+	public WheelInfo[] WheelInfo;
+	public float Speed = 10;
+	public float MaxMotor;
+	public float MaxSteer;
+	public float BreakForce;
+	public float minmovement = 0.1f;
+	public Transform center;
+	public Rigidbody rb;
+	public float GameStartDelayTime = 3.6f;
+
+	private bool bStageStart = false;
+
+	private void Start()
+	{
+		rb = GetComponent<Rigidbody>();
+		rb.centerOfMass = center.localPosition;
+
+		StartCoroutine(StageStart());
+	}
+	public bool IsMoving()
+	{
+		return rb.velocity.magnitude > minmovement;
+	}
+
+	IEnumerator StageStart()
+	{
+		yield return new WaitForSeconds(GameStartDelayTime);
+		bStageStart = true;
+	}
+
+	public void MoveWheel(float moterTorque, float steer, bool bIsBreak)
+	{
+		if (bStageStart)
+		{
+			moterTorque *= MaxMotor * Speed;
+			steer *= MaxSteer;
+
+			foreach (var wheel in WheelInfo)
+			{
+				if (wheel.Motor)
+				{
+					wheel.L_Wheel.motorTorque = moterTorque;
+					wheel.R_Wheel.motorTorque = moterTorque;
+				}
+
+				if (wheel.Steering)
+				{
+					wheel.L_Wheel.steerAngle = steer;
+					wheel.R_Wheel.steerAngle = steer;
+				}
+
+				float isbreak = (bIsBreak ? 1 : 0);
+
+				wheel.L_Wheel.brakeTorque = BreakForce * isbreak;
+				wheel.R_Wheel.brakeTorque = BreakForce * isbreak;
+			}
+		}
+		
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class PlayerController : MonoBehaviour
+{
+	private CarMoveSystem _carMoveSystem;
+	private float baseSpeed = 10f;
+	
+	public GameObject impactEffectPrefab;
+	void Start()
+	{
+		_carMoveSystem = GetComponent<CarMoveSystem>();
+	}
+
+	void FixedUpdate()
+	{
+		MoveInput();	
+	}
+
+	void MoveInput()
+	{
+
+		if (Input.GetKeyDown(KeyCode.K))
+		{
+			_carMoveSystem.rb.AddForce(transform.forward * 10000, ForceMode.Impulse);
+		}
+		float motorTorque = Input.GetAxis("Vertical");
+		float steer = Input.GetAxis("Horizontal");
+		bool isbreak = Input.GetKey(KeyCode.Space);
+
+		_carMoveSystem.MoveWheel(motorTorque, steer, isbreak);
+	}
+
+	private void OnCollisionEnter(Collision collision)
+	{
+		GameManager.Instance.SoundManager.StopAllSFX();
+		GameManager.Instance.SoundManager.PlaySFX("Crush");
+		// 들어온 콜라이더의 방향을 가져옴
+		UnityEngine.Vector3 direction = (collision.transform.position - transform.position).normalized;
+
+		// 콜라이더의 방향을 기준으로 앞, 뒤, 오른쪽, 왼쪽을 판별함
+		float dotForward = UnityEngine.Vector3.Dot(transform.forward, direction);
+		float dotRight = UnityEngine.Vector3.Dot(transform.right, direction);
+
+		// 방향을 기준으로 판별된 결과를 출력
+		if (dotForward > 0.5f)
+		{
+			_carMoveSystem.Speed -= 0.1f;
+			SpawnImpactEffect(collision.contacts[0].point);
+
+		}
+		else if (dotForward < -0.5f)
+		{
+			_carMoveSystem.rb.AddForce(transform.forward * 20000, ForceMode.Impulse);
+			SpawnImpactEffect(collision.contacts[0].point);
+
+		}
+		else if (dotRight > 0.5f)
+		{
+			_carMoveSystem.Speed -= 0.05f;
+			SpawnImpactEffect(collision.contacts[0].point);
+
+		}
+
+		else if (dotRight < -0.5f)
+		{
+			_carMoveSystem.Speed -= 0.05f;
+			SpawnImpactEffect(collision.contacts[0].point);
+
+		}
+	}
+
+
+	private void OnTriggerEnter(Collider other)
+	{
+		BaseItem item = other.GetComponent<BaseItem>();
+		if (item != null)
+		{
+			item.OnGetItem(this);
+			Destroy(other.gameObject);
+			SoundManager.instance.PlaySFX("GetItem");
+		}
+
+		if (other.CompareTag("Home"))
+		{
+			Debug.Log("느려짐! 현재 속도: " + _carMoveSystem.Speed + ", 기본 속도: " + baseSpeed);
+			_carMoveSystem.Speed = baseSpeed * 0.1f;
+			Debug.Log("속도 변경 후: " + _carMoveSystem.Speed);
+
+			// 여기에서 Coroutine을 호출합니다.
+			StartCoroutine(ResetSpeedAfterDelay(2.0f));
+		}
+	}
+
+	private void SpawnImpactEffect(UnityEngine.Vector3 position)
+	{
+		if (impactEffectPrefab != null)
+		{
+			GameObject impactEffect = Instantiate(impactEffectPrefab, position, Quaternion.identity);
+			Destroy(impactEffect, 0.7f);
+		}
+	}
+
+
+	IEnumerator ResetSpeedAfterDelay(float delay)
+	{
+		yield return new WaitForSeconds(delay);
+		_carMoveSystem.Speed = baseSpeed;
+		Debug.Log("속도 복구됨: " + _carMoveSystem.Speed);
+	}
+
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using TMPro;
+using UnityEngine;
+
+public class PlayerUI : MonoBehaviour
+{
+	public TextMeshProUGUI TimeText;
+	public TextMeshProUGUI CoinText;
+	public TextMeshProUGUI SpeedText;
+	public TextMeshProUGUI ScoreText;
+
+	private Rigidbody playerRigidbody;
+
+	private void Start()
+	{
+		playerRigidbody = GameObject.Find("PlayerCharacter").GetComponent<Rigidbody>();
+	}
+
+	void Update()
+	{
+		TimeText.text = GameInstance.instance.GamePlayTime.ToString();
+		CoinText.text = GameInstance.instance.Coin.ToString();
+		ScoreText.text = "Score : " + GameInstance.instance.Score.ToString();
+		if (playerRigidbody != null)
+		{
+			float speed = playerRigidbody.velocity.magnitude;
+			SpeedText.text = "Speed : " + speed.ToString();
+		}
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+
+public class TerrainDetector : MonoBehaviour
+{
+	private TerrainData terrainData;
+	private int alphamapWidth;
+	private int alphamapHeight;
+	private float[,,] splatmapData;
+	private int numTextures;
+
+	public TerrainDetector()
+	{
+		terrainData = Terrain.activeTerrain.terrainData;
+		alphamapWidth = terrainData.alphamapWidth;
+		alphamapHeight = terrainData.alphamapHeight;
+
+		splatmapData = terrainData.GetAlphamaps(0, 0, alphamapWidth, alphamapHeight);
+		numTextures = splatmapData.Length / (alphamapWidth * alphamapHeight);
+	}
+
+	private Vector3 ConvertToSplatMapCoordinate(Vector3 worldPosition)
+	{
+		Vector3 splatPosition = new Vector3();
+		Terrain ter = Terrain.activeTerrain;
+		Vector3 terPosition = ter.transform.position;
+		splatPosition.x = ((worldPosition.x - terPosition.x) / ter.terrainData.size.x) * ter.terrainData.alphamapWidth;
+		splatPosition.z = ((worldPosition.z - terPosition.z) / ter.terrainData.size.z) * ter.terrainData.alphamapHeight;
+		return splatPosition;
+	}
+
+	public int GetActiveTerrainTextureIdx(Vector3 position)
+	{
+		Vector3 terrainCord = ConvertToSplatMapCoordinate(position);
+		int activeTerrainIndex = 0;
+		float largestOpacity = 0f;
+
+		for (int i = 0; i < numTextures; i++)
+		{
+			if (largestOpacity < splatmapData[(int)terrainCord.z, (int)terrainCord.x, i])
+			{
+				activeTerrainIndex = i;
+				largestOpacity = splatmapData[(int)terrainCord.z, (int)terrainCord.x, i];
+			}
+		}
+
+		return activeTerrainIndex;
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+
+public class Warning : MonoBehaviour
+{
+	public Transform player;
+	public float orbitDegreesPerSec = 30f;
+	public float orbitDistance = 5f;
+
+	void Update()
+	{
+		OrbitAroundPlayer();
+		LookAtClosestEnemy();
+	}
+
+	void OrbitAroundPlayer()
+	{
+		if (player != null)
+		{
+			transform.RotateAround(player.position, Vector3.up, orbitDegreesPerSec * Time.deltaTime);
+			Vector3 direction = (transform.position - player.position).normalized * orbitDistance;
+			transform.position = player.position + direction;
+		}
+	}
+
+	void LookAtClosestEnemy()
+	{
+		GameObject closestEnemy = FindClosestEnemy();
+		if (closestEnemy != null)
+		{
+			transform.LookAt(closestEnemy.transform);
+		}
+	}
+
+	GameObject FindClosestEnemy()
+	{
+		GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
+		GameObject closest = null;
+		float closestDistanceSqr = Mathf.Infinity;
+		Vector3 currentPosition = player.position;
+		foreach (GameObject enemy in enemies)
+		{
+			Vector3 directionToTarget = enemy.transform.position - currentPosition;
+			float dSqrToTarget = directionToTarget.sqrMagnitude;
+			if (dSqrToTarget < closestDistanceSqr)
+			{
+				closestDistanceSqr = dSqrToTarget;
+				closest = enemy;
+			}
+		}
+		return closest;
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class ShopManager : BaseManager
+{
+	public Button[] itemButtons;
+	private Button selectedButton;
+	public Button purchaseButton;
+	public GameObject ShopPage;
+	public bool IsFree = false;
+	public Dictionary<string, int> itemPrices = new Dictionary<string, int>();
+	public CarMoveSystem PlayerCarMoveSystem;
+
+	public List<RawImage> itemImages = new List<RawImage>();
+	public List<Texture2D> purchasedTextures = new List<Texture2D>();
+
+	void Start()
+	{
+		InitializeItemPrices();
+		LoadPurchasedItems(); // 구매한 아이템 불러오기
+		foreach (Button btn in itemButtons)
+		{
+			btn.onClick.AddListener(() => OnItemButtonClicked(btn));
+			btn.GetComponent<Outline>().enabled = false;
+		}
+		purchaseButton.onClick.AddListener(OnPurchaseButtonClicked);
+	}
+	void LoadPurchasedItems()
+	{
+		foreach (var itemName in itemPrices.Keys)
+		{
+			if (GameInstance.instance.IsItemPurchased(itemName))
+			{
+				Texture2D partTexture = GetPartTexture(itemName);
+				if (partTexture != null)
+				{
+					purchasedTextures.Add(partTexture);
+					LoadItemTexture(itemName, partTexture);
+				}
+			}
+		}
+	}
+	void LoadItemTexture(string itemName, Texture2D texture)
+	{
+		foreach (RawImage image in itemImages)
+		{
+			if (image.texture == null)
+			{
+				image.texture = texture;
+				// 텍스처 로드 후 PlayerPrefs를 통해 다음 스테이지로 전달
+				PlayerPrefs.SetString("SelectedTexture", texture.name);
+				PlayerPrefs.Save();
+				break;
+			}
+		}
+	}
+
+	void PurchasePart(string partName)
+	{
+		Texture2D partTexture = GetPartTexture(partName);
+		if (partTexture != null)
+		{
+			if (!purchasedTextures.Contains(partTexture)) // 중복 추가 방지
+			{
+				purchasedTextures.Add(partTexture);
+			
+			}
+			GameInstance.instance.PurchaseItem(partName); // 구매 정보 저장
+			AddPurchasedItemTexture(partTexture); // 새로운 아이템의 텍스처 추가
+		}
+	}
+
+
+	void InitializeItemPrices()
+	{
+		itemPrices.Add("DesertWheel", 10000000);
+		itemPrices.Add("DownTownWheel", 10000000);
+		itemPrices.Add("MountainWheel", 10000000);
+		itemPrices.Add("SixEngine", 10000000);
+		itemPrices.Add("EightEngine", 10000000);
+	}
+
+	void OnItemButtonClicked(Button button)
+	{
+		if (selectedButton != null)
+		{
+			selectedButton.GetComponent<Outline>().enabled = false;
+		}
+		selectedButton = button;
+		selectedButton.GetComponent<Outline>().enabled = true;
+	}
+
+
+	Texture2D GetPartTexture(string partName)
+	{
+		foreach (Texture2D texture in purchasedTextures)
+		{
+			if (texture.name == partName)
+			{
+				return texture;
+			}
+		}
+		return null;
+	}
+
+	void OnPurchaseButtonClicked()
+	{
+		if (selectedButton != null)
+		{
+			int itemPrice = GetItemPrice(selectedButton.gameObject.name);
+
+			if (IsFree || GameInstance.instance.Coin >= itemPrice)
+			{
+				if (!IsFree)
+				{
+					GameInstance.instance.Coin -= itemPrice;
+				}
+
+				PurchasePart(selectedButton.gameObject.name);
+				OnGetPart();
+				selectedButton.GetComponent<Outline>().enabled = false;
+				selectedButton = null;
+			}
+			else
+			{
+				Debug.Log("돈이 부족합니다.");
+			}
+		}
+	}
+
+	void OnGetPart()
+	{
+		string itemName = selectedButton.gameObject.name;
+		foreach (Part part in GameManager.Instance.PartManager.Parts)
+		{
+			if (part.Prefab.name == itemName)
+			{
+				BasePart basePartScript = part.Prefab.GetComponent<BasePart>();
+				basePartScript.OnGetPart(PlayerCarMoveSystem);
+				break;
+			}
+		}
+	}
+
+	int GetItemPrice(string itemName)
+	{
+		if (itemPrices.ContainsKey(itemName))
+		{
+			return itemPrices[itemName];
+		}
+		else
+		{
+			Debug.LogError("해당 상품의 가격을 찾을 수 없습니다: " + itemName);
+			return 0;
+		}
+	}
+
+	void AddPurchasedItemTexture(Texture2D newItemTexture)
+	{
+		// 새로 구매한 아이템의 텍스처를 purchasedTextures 리스트에 추가
+		purchasedTextures.Add(newItemTexture);
+
+		// UI 업데이트를 위해 최근에 구매한 아이템의 텍스처만 추가
+		// itemImages 리스트에 빈 슬롯이 있는지 확인
+		bool itemAdded = false;
+		foreach (RawImage image in itemImages)
+		{
+			if (image.texture == null)
+			{
+				image.texture = newItemTexture;
+				itemAdded = true;
+				break;
+			}
+		}
+
+		// 모든 itemImages 슬롯이 차있는 경우, 새로운 아이템을 리스트에 추가하지 않음
+		// 필요하다면 여기에서 리스트 크기를 조정하거나, 오래된 아이템을 제거하는 로직을 추가할 수 있습니다.
+		if (!itemAdded)
+		{
+			Debug.Log("UI에 추가할 공간이 없습니다. UI를 확장하거나, 기존 아이템을 제거해주세요.");
+		}
+
+		// 새로 추가된 부분: 선택된 텍스처를 PlayerPrefs를 통해 다음 스테이지로 전달
+		PlayerPrefs.SetString("SelectedTexture", newItemTexture.name);
+		PlayerPrefs.Save();
+	}
+	public void GoingShop()
+	{
+		ShopPage.SetActive(true);
+		Time.timeScale = 0f;
+	}
+
+	public void ExitShop()
+	{
+		IsFree = false;
+		ShopPage.SetActive(false);
+		Time.timeScale = 1f;
+	}
+}
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+using System.Collections.Generic;
+using UnityEngine;
+
+public class GameInstance : MonoBehaviour
+{
+	public static GameInstance instance;
+	public float Speed;
+	public float GamePlayTime = 0f;
+	public int Coin = 0;
+	public int Score = 0;
+	public int RabCount = 0;
+	public int EnemyRabCount = 0;
+	public List<Part> partsList = new List<Part>();
+	public Dictionary<string, bool> purchasedItems = new Dictionary<string, bool>();
+	private void Awake()
+	{
+		if (instance == null)
+		{
+			instance = this;
+			DontDestroyOnLoad(this);
+		}
+		else
+		{
+			Destroy(gameObject);
+		}
+	}
+
+	public void AddPart(Part part)
+	{
+		partsList.Add(part);
+	}
+
+	public void PurchaseItem(string itemName)
+	{
+		if (!purchasedItems.ContainsKey(itemName))
+		{
+			purchasedItems[itemName] = true;
+			PlayerPrefs.SetInt(itemName, 1);
+			PlayerPrefs.Save();
+		}
+	}
+
+
+	public bool IsItemPurchased(string itemName)
+	{
+		if (purchasedItems.ContainsKey(itemName))
+		{
+			return purchasedItems[itemName];
+		}
+		else
+		{
+			int purchased = PlayerPrefs.GetInt(itemName, 0);
+			bool isPurchased = purchased == 1;
+			purchasedItems[itemName] = isPurchased;
+			return isPurchased;
+		}
+	}
+
+}
+
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------
