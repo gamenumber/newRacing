@@ -11717,6 +11717,10 @@ PrefabInstance:
       propertyPath: SlowPage
       value: 
       objectReference: {fileID: 732170690}
+    - target: {fileID: 3357671594974732926, guid: 02ff69b6176584344985c114506d4a4e, type: 3}
+      propertyPath: baseSpeed
+      value: 5
+      objectReference: {fileID: 0}
     - target: {fileID: 3949239228010649823, guid: 02ff69b6176584344985c114506d4a4e, type: 3}
       propertyPath: m_LocalPosition.x
       value: -224.9418
@@ -11757,6 +11761,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5300413417526062801, guid: 02ff69b6176584344985c114506d4a4e, type: 3}
+      propertyPath: MaxSteer
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 5363311018055775573, guid: 02ff69b6176584344985c114506d4a4e, type: 3}
       propertyPath: CoinText
       value: 
@@ -11775,7 +11783,7 @@ PrefabInstance:
       objectReference: {fileID: 208890281}
     - target: {fileID: 7412306033756303826, guid: 02ff69b6176584344985c114506d4a4e, type: 3}
       propertyPath: m_Mass
-      value: 600
+      value: 2400
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

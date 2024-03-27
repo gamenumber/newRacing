@@ -218,6 +218,11 @@ public class GameManager : MonoBehaviour
 			}
 
 		}
+
+		if (Input.GetKeyDown(KeyCode.F7))
+		{
+			GameInstance.instance.RabCount += 1;
+		}
 	}
 
 	public void BoostItem()
