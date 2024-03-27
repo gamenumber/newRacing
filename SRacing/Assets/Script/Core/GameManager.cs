@@ -222,31 +222,37 @@ public class GameManager : MonoBehaviour
 	public void BoostItem()
 	{
 		SpawnItemByName(EnumTypes.ItemName.Boost);
+		F1Page.gameObject.SetActive(false);
 	}
 
 	public void BooostItem()
 	{
 		SpawnItemByName(EnumTypes.ItemName.Booost);
+		F1Page.gameObject.SetActive(false);
 	}
 
 	public void ShopItem()
 	{
 		SpawnItemByName(EnumTypes.ItemName.shop);
+		F1Page.gameObject.SetActive(false);
 	}
 
 	public void SmallGoldItem()
 	{
 		SpawnItemByName(EnumTypes.ItemName.smallgold);
+		F1Page.gameObject.SetActive(false);
 	}
 
 	public void MiddleGoldItem()
 	{
 		SpawnItemByName(EnumTypes.ItemName.middlegold);
+		F1Page.gameObject.SetActive(false);
 	}
 
 	public void BigGoldItem()
 	{
 		SpawnItemByName(EnumTypes.ItemName.biggold);
+		F1Page.gameObject.SetActive(false);
 	}
 
 	private void SpawnItemByName(EnumTypes.ItemName itemName)
