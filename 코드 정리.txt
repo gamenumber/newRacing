@@ -1314,51 +1314,30 @@ public class DownTownWheel : BasePart
 
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class EightEngine : BasePart
 {
-	private ParticleSystem _particleSystem;
-	public CarMoveSystem CarMoveSystem;
-	public bool Isbuy = false;
-
-	private void Awake()
-	{
-		_particleSystem = GetComponent<ParticleSystem>();
-	}
-
-	private void Update()
-	{
-		if (Isbuy)
-		{
-			if (CarMoveSystem.IsMoving())
-			{
-				if (!_particleSystem.isPlaying)
-				{
-					_particleSystem.Play();
-				}
-			}
-			else
-			{
-				if (_particleSystem.isPlaying)
-				{
-					_particleSystem.Stop();
-				}
-			}
-		}
-	}
+	public ParticleSystem _particleSystem;
+	public CarGroundEffectSystem _carGroundEffectSystem;
+	public PlayerController _playerController;
 
 	public override void OnGetPart(CarMoveSystem car)
 	{
-		Isbuy = true;
+		_playerController = GameObject.FindWithTag("Player").GetComponent<PlayerController>();
+		_carGroundEffectSystem = GameObject.FindWithTag("Player").GetComponent<CarGroundEffectSystem>();
+		if (_particleSystem == null)
+		{
+			_particleSystem = GetComponent<ParticleSystem>();
+		}
 		base.OnGetPart(car);
-		this.CarMoveSystem = car;
-		Debug.Log("8±âÅë ¿£Áø");
-		car.Speed += 4f;
+		_carGroundEffectSystem.baseSpeed += 4;
+		GameInstance.instance.Speed = _carGroundEffectSystem.baseSpeed;
+		_playerController.b_buyEight = true;
+
 	}
 }
+
 
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -1410,51 +1389,30 @@ public class MountainWheel : BasePart
 
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class SixEngine : BasePart
 {
-	private ParticleSystem _particleSystem;
-	public CarMoveSystem CarMoveSystem;
-	public bool Isbuy = false;
-
-	private void Awake()
-	{
-		_particleSystem = GetComponent<ParticleSystem>();
-	}
-
-	private void Update()
-	{
-		if (Isbuy)
-		{
-			if (CarMoveSystem.IsMoving())
-			{
-				if (!_particleSystem.isPlaying)
-				{
-					_particleSystem.Play();
-				}
-			}
-			else
-			{
-				if (_particleSystem.isPlaying)
-				{
-					_particleSystem.Stop();
-				}
-			}
-		}
-	}
+	public ParticleSystem _particleSystem;
+	public CarGroundEffectSystem _carGroundEffectSystem;
+	public PlayerController _playerController;
 
 	public override void OnGetPart(CarMoveSystem car)
 	{
-		Isbuy = true;
+		_playerController = GameObject.FindWithTag("Player").GetComponent<PlayerController>();
+		_carGroundEffectSystem = GameObject.FindWithTag("Player").GetComponent<CarGroundEffectSystem>();
+		if (_particleSystem == null)
+		{
+			_particleSystem = GetComponent<ParticleSystem>();
+		}
 		base.OnGetPart(car);
-		this.CarMoveSystem = car;
-		car.Speed += 2f;
-		
+		_carGroundEffectSystem.baseSpeed += 2;
+		GameInstance.instance.Speed = _carGroundEffectSystem.baseSpeed;
+		_playerController.b_buySix = true;
+
 	}
 }
+
 
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -1583,6 +1541,12 @@ public class PlayerController : MonoBehaviour
 {
 	private CarMoveSystem _carMoveSystem;
 	private float baseSpeed = 10f;
+
+	public GameObject SixEngine;
+	public GameObject EightEngine;
+
+	public bool b_buySix;
+	public bool b_buyEight;
 	
 	public GameObject impactEffectPrefab;
 	void Start()
@@ -1592,6 +1556,15 @@ public class PlayerController : MonoBehaviour
 
 	void FixedUpdate()
 	{
+		if (b_buyEight)
+		{
+			EightEngine.SetActive(true);
+		}
+
+		if (b_buySix)
+		{
+			SixEngine.SetActive(true);
+		}
 		MoveInput();	
 	}
 
