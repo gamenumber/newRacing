@@ -17,6 +17,8 @@ public class PlayerController : MonoBehaviour
 	void Start()
 	{
 		_carMoveSystem = GetComponent<CarMoveSystem>();
+		 b_buyEight = GameInstance.instance.EightEngine;
+		 b_buySix = GameInstance.instance.SixEngine;
 	}
 
 	void FixedUpdate()
@@ -24,11 +26,13 @@ public class PlayerController : MonoBehaviour
 		if (b_buyEight)
 		{
 			EightEngine.SetActive(true);
+			GameInstance.instance.EightEngine = true;
 		}
 
 		if (b_buySix)
 		{
 			SixEngine.SetActive(true);
+			GameInstance.instance.SixEngine = true;
 		}
 		MoveInput();	
 	}

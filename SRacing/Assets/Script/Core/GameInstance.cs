@@ -12,6 +12,10 @@ public class GameInstance : MonoBehaviour
 	public int EnemyRabCount = 0;
 	public List<Part> partsList = new List<Part>();
 	public Dictionary<string, bool> purchasedItems = new Dictionary<string, bool>();
+
+	public bool SixEngine;
+	public bool EightEngine;
+
 	private void Awake()
 	{
 		if (instance == null)

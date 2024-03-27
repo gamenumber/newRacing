@@ -1552,6 +1552,8 @@ public class PlayerController : MonoBehaviour
 	void Start()
 	{
 		_carMoveSystem = GetComponent<CarMoveSystem>();
+		 b_buyEight = GameInstance.instance.EightEngine;
+		 b_buySix = GameInstance.instance.SixEngine;
 	}
 
 	void FixedUpdate()
@@ -1559,11 +1561,13 @@ public class PlayerController : MonoBehaviour
 		if (b_buyEight)
 		{
 			EightEngine.SetActive(true);
+			GameInstance.instance.EightEngine = true;
 		}
 
 		if (b_buySix)
 		{
 			SixEngine.SetActive(true);
+			GameInstance.instance.SixEngine = true;
 		}
 		MoveInput();	
 	}
@@ -1742,61 +1746,6 @@ public class TerrainDetector : MonoBehaviour
 		}
 
 		return activeTerrainIndex;
-	}
-}
-
-----------------------------------------------------------------------------------------------------------------------------------------------
-
-using UnityEngine;
-
-public class Warning : MonoBehaviour
-{
-	public Transform player;
-	public float orbitDegreesPerSec = 30f;
-	public float orbitDistance = 5f;
-
-	void Update()
-	{
-		OrbitAroundPlayer();
-		LookAtClosestEnemy();
-	}
-
-	void OrbitAroundPlayer()
-	{
-		if (player != null)
-		{
-			transform.RotateAround(player.position, Vector3.up, orbitDegreesPerSec * Time.deltaTime);
-			Vector3 direction = (transform.position - player.position).normalized * orbitDistance;
-			transform.position = player.position + direction;
-		}
-	}
-
-	void LookAtClosestEnemy()
-	{
-		GameObject closestEnemy = FindClosestEnemy();
-		if (closestEnemy != null)
-		{
-			transform.LookAt(closestEnemy.transform);
-		}
-	}
-
-	GameObject FindClosestEnemy()
-	{
-		GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
-		GameObject closest = null;
-		float closestDistanceSqr = Mathf.Infinity;
-		Vector3 currentPosition = player.position;
-		foreach (GameObject enemy in enemies)
-		{
-			Vector3 directionToTarget = enemy.transform.position - currentPosition;
-			float dSqrToTarget = directionToTarget.sqrMagnitude;
-			if (dSqrToTarget < closestDistanceSqr)
-			{
-				closestDistanceSqr = dSqrToTarget;
-				closest = enemy;
-			}
-		}
-		return closest;
 	}
 }
 
@@ -2020,6 +1969,10 @@ public class GameInstance : MonoBehaviour
 	public int EnemyRabCount = 0;
 	public List<Part> partsList = new List<Part>();
 	public Dictionary<string, bool> purchasedItems = new Dictionary<string, bool>();
+
+	public bool SixEngine;
+	public bool EightEngine;
+
 	private void Awake()
 	{
 		if (instance == null)
@@ -2065,6 +2018,8 @@ public class GameInstance : MonoBehaviour
 	}
 
 }
+
+
 
 
 
