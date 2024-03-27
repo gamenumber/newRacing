@@ -115,6 +115,7 @@ public class GameManager : MonoBehaviour
 	{
 		Time.timeScale = 1f;
 		SceneManager.LoadScene($"{SceneManager.GetActiveScene().name}");
+		GameInstance.instance.GamePlayTime = 0;
 	}
 
 	public void StageEnd()
